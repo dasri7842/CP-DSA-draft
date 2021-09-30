@@ -89,7 +89,6 @@ void debug_out(Head H, Tail... T) {
 
 #define debug(...) _cerr << "[" << #__VA_ARGS__ << "]:", debug_out(__VA_ARGS__)
 
-/*
 
 class DSU {
     int n;
@@ -953,5 +952,3 @@ class Kstream {
 
     int get() { return sum; }
 };
-
-*/
