@@ -1,95 +1,106 @@
+/*
+Some Implementations, that I learned and applied at CSES website.
+
+CSES Profile : https://cses.fi/user/72463
+Command Used: cd "d:\CP-DSA\" && g++ -Ddasari -Wshadow -pedantic -Wall
+"-Wl,--stack=268435456" -Wextra -O2 -std=c++14 0.cpp -o 0 && "d:\CP-DSA\"0
+*/
+
 #include <bits/stdc++.h>
 using namespace std;
-#define _cerr cerr
 
-auto FileIO = []() {
-    freopen("input.txt", "r", stdin);
-    freopen("output.txt", "w", stdout);
-    freopen("error.txt", "w", stderr);
-    return true;
-}();
+// Left right pointer Implementation of Segment Tree.
+template <typename T>
+class SegTree {
+    T val;
+    int tl, tr;
+    SegTree *left, *right;
 
-template <typename A, typename B>
-string to_string(pair<A, B> p);
-
-template <typename A, typename B, typename C>
-string to_string(tuple<A, B, C> p);
-
-template <typename A, typename B, typename C, typename D>
-string to_string(tuple<A, B, C, D> p);
-
-string to_string(const string& s) { return '"' + s + '"'; }
-
-string to_string(const char* s) { return to_string((string)s); }
-
-string to_string(bool b) { return (b ? "true" : "false"); }
-
-string to_string(vector<bool> v) {
-    bool first = true;
-    string res = "{";
-    for (int i = 0; i < static_cast<int>(v.size()); i++) {
-        if (!first) {
-            res += ", ";
+   public:
+    SegTree(vector<T>& arr, int l, int r) : tl(l), tr(r) {
+        if (l == r) {
+            left = NULL, right = NULL;
+            val = arr[l];
+            return;
         }
-        first = false;
-        res += to_string(v[i]);
+        int m = (l + r) / 2;
+        left = new SegTree(arr, l, m);
+        right = new SegTree(arr, m + 1, r);
+        pull();
     }
-    res += "}";
-    return res;
-}
 
-template <size_t N>
-string to_string(bitset<N> v) {
-    string res = "";
-    for (size_t i = 0; i < N; i++) {
-        res += static_cast<char>('0' + v[i]);
+    void pull() { val = max(left->val, right->val); }
+
+    T Q(int l, int r) {
+        if (r < tl or l > tr) return -1e18;
+        if (l <= tl and tr <= r) return val;
+        return max(left->Q(l, r), right->Q(l, r));
     }
-    return res;
-}
 
-template <typename A>
-string to_string(A v) {
-    bool first = true;
-    string res = "{";
-    for (const auto& x : v) {
-        if (!first) {
-            res += ", ";
+    void U(int pos, int upd) {
+        if (tl == tr) {
+            val = upd;
+            return;
         }
-        first = false;
-        res += to_string(x);
+        int tm = (tl + tr) / 2;
+        pos <= tm ? left->U(pos, upd) : right->U(pos, upd);
+        pull();
     }
-    res += "}";
-    return res;
-}
+};
 
-template <typename A, typename B>
-string to_string(pair<A, B> p) {
-    return "(" + to_string(p.first) + ", " + to_string(p.second) + ")";
-}
+// segmen Tree Lazy and set
+// Just think about leaves and how to merge them.
+template <typename T>
+struct LazysegNode {
+   private:
+    T val = 0, set = -1, add = 0;
+    int tl, tr;
+    LazysegNode *left, *right;
 
-template <typename A, typename B, typename C>
-string to_string(tuple<A, B, C> p) {
-    return "(" + to_string(get<0>(p)) + ", " + to_string(get<1>(p)) + ", " +
-           to_string(get<2>(p)) + ")";
-}
+   public:
+    LazysegNode(int l, int r, vector<int>& ar) : tl(l), tr(r) {
+        if (l == r) {
+            val = ar[l];
+            return;
+        }
+        int m = (l + r) / 2;
+        left = new LazysegNode(l, m, ar);
+        right = new LazysegNode(m + 1, r, ar);
+        pull();
+    }
 
-template <typename A, typename B, typename C, typename D>
-string to_string(tuple<A, B, C, D> p) {
-    return "(" + to_string(get<0>(p)) + ", " + to_string(get<1>(p)) + ", " +
-           to_string(get<2>(p)) + ", " + to_string(get<3>(p)) + ")";
-}
+    void upd(int l, int r, int sv, int av) {
+        if (r < tl or tr < l) return;
+        if (l <= tl and tr <= r) {
+            compose(sv, av);
+            return;
+        }
+        push();
+        left->upd(l, r, sv, av), right->upd(l, r, sv, av);
+        pull();
+    }
 
-void debug_out() { _cerr << endl; }
+    T qry(int l, int r) {
+        if (r < tl or tr < l) return 0;
+        if (l <= tl and tr <= r) return sum();
+        push(), pull();
+        return left->qry(l, r) + right->qry(l, r);
+    }
 
-template <typename Head, typename... Tail>
-void debug_out(Head H, Tail... T) {
-    _cerr << " " << to_string(H);
-    debug_out(T...);
-}
+   private:
+    T sum() {
+        return set == -1 ? val + add * (tr - tl + 1)
+                         : (set + add) * (tr - tl + 1);
+    }
+    void pull() { val = left->sum() + right->sum(); }
+    void compose(T sv, T av) { sv != -1 ? set = sv, add = av : add += av; }
+    void push() {
+        left->compose(set, add), right->compose(set, add);
+        set = -1, add = 0;
+    }
+};
 
-#define debug(...) _cerr << "[" << #__VA_ARGS__ << "]:", debug_out(__VA_ARGS__)
-
-
+// Disjoint set Union
 class DSU {
     int n;
     vector<int> par;
@@ -114,6 +125,7 @@ class DSU {
     }
 };
 
+// log operation - medianStream
 class MedianStream {
    private:
     multiset<int, greater<int>> sml;
@@ -156,6 +168,7 @@ class MedianStream {
     }
 };
 
+// O(n) preprocessing
 class combinatorics {
    private:
     int mod;
@@ -263,6 +276,7 @@ class TRIE {
     }
 };
 
+// Strongly Connected Components.
 class SCC {
    private:
     int tot;
@@ -451,76 +465,7 @@ class SparseTable {
     int fun(int a, int b) { return __gcd(a, b); }
 };
 
-class SegmentTree {
-    int n;
-    vector<int> seg;
-
-   public:
-    SegmentTree(vector<int>& arr) {
-        n = arr.size();
-        seg.resize(2 * n, 0);
-        for (int i = 0; i < n; i++) seg[i + n] = arr[i];
-        for (int i = n - 1; i > 0; i--)
-            seg[i] = fun(seg[i << 1], seg[i << 1 | 1]);
-    }
-    int query(int L, int R, int ans = 0) {  // zero indexing;
-        for (L += n, R += n; L <= R; L >>= 1, R >>= 1) {
-            if (L & 1) ans = fun(ans, seg[L++]);
-            if (R & 1 ^ 1) ans = fun(ans, seg[R--]);
-        }
-        return ans;
-    }
-    void update(int pos, int val) {
-        seg[pos + n] = val;
-        for (int i = pos + n; i > 0; i >>= 1)
-            seg[i >> 1] = fun(seg[i], seg[i ^ 1]);
-    }
-    int fun(int a, int b) { return min(a, b); }
-};
-
-// class SegmentTreeRec {
-//     int n, init;
-//     vector<int> seg;
-
-//    public:
-//     SegmentTreeRec(vector<int>& arr, int val = 0) {
-//         n = arr.size();
-//         init = val;
-//         seg.resize(4 * n, init);
-//         build(arr, 1, 0, n - 1);
-//     }
-//     void build(vector<int>& arr, int v, int tl, int tr) {
-//         if (tl == tr)
-//             seg[v] = arr[tl];
-//         else {
-//             int tm = (tl + tr) / 2;
-//             build(arr, 2 * v, tl, tm);
-//             build(arr, 2 * v + 1, tm + 1, tr);
-//             seg[v] = fun(seg[2 * v], seg[2 * v + 1]);
-//         }
-//     }
-//     int query(int l, int r) { return _Q(l, r, 1, 0, n - 1); }
-//     int _Q(int l, int r, int v, int tl, int tr) {
-//         if (l > r) return init;
-//         if (l == tl and r == tr) return seg[v];
-//         int tm = (tl + tr) / 2;
-//         return fun(_Q(l, min(r, tm), 2 * v, tl, tm),
-//                    _Q(max(l, tm + 1), r, 2 * v + 1, tm + 1, tr));
-//     }
-//     void update(int pos, int val) { _U(pos, val, 1, 0, n - 1); }
-//     void _U(int pos, int val, int v, int tl, int tr) {
-//         if (tl == tr)
-//             seg[v] = val;
-//         else {
-//             int tm = (tl + tr) / 2;
-//             pos <= tm ? _U(pos, val, 2 * v, tl, tm)
-//                       : _U(pos, val, 2 * v + 1, tm + 1, tr);
-//             seg[v] = fun(seg[2 * v], seg[2 * v + 1]);
-//         }
-//     }
-//     int fun(int a, int b) { return min(a, b); }
-// };
-
+// Coordinate Compressing.
 class CompressNums {
    public:
     vector<int> compress(vector<int>& arr) {
@@ -672,6 +617,7 @@ class SubTreeQry {  // 1 - indexed
     int qry(int v) { return fn.query(in[v], in[v] + sz[v] - 1); }
 };
 
+// Iterative Implementation of SegmentTree.
 class SegmentTreeIter {
     int n;
     vector<int> seg;
@@ -696,6 +642,7 @@ class SegmentTreeIter {
     int fun(int a, int b) { return max(a, b); }
 };
 
+// Yay! Heavy Light Decomposition.
 class HLD {  // 1 - indexed
     int n, rt, timer = 0;
     vector<vector<int>> A;
@@ -743,6 +690,7 @@ class HLD {  // 1 - indexed
     }
 };
 
+// Matrix Computations.
 class Matrix {
    public:
     void matrix_product(vector<vector<int>>& a, vector<vector<int>>& b,
@@ -952,3 +900,68 @@ class Kstream {
 
     int get() { return sum; }
 };
+
+// class DiagonalMatrix {
+//     int n, m;
+//     vector<vector<int>> mat, pf;
+
+//    public:
+//     DiagonalMatrix(vector<vector<int>> &grid) {
+//         mat = grid, pf = grid;
+//         n = mat.size(), m = mat[0].size();
+//         forn1(i, n - 1) forn1(j, m - 1) pf[i][j] += pf[i - 1][j - 1];
+//     }
+//     int query(int ti, int tj, int bi, int bj) {
+//         assert(tj - ti == bj - bi);
+//         int sum = pf[bi][bj];
+//         if (ti and tj) sum -= pf[ti - 1][tj - 1];
+//         return sum;
+//     }
+//     int ask(int i, int j, int dist) {
+//         int ti = i - dist, tj = j;
+//         int bi = i, bj = j + dist;
+//         if (ti < 0) tj -= ti, ti = 0;
+//         if (bj >= m) bi -= (bj - m + 1), bj = m - 1;
+//         if (tj == j) ti++, tj++;
+//         if (tj > bj or ti > bi or mat[i][j] == 0) return 0;
+//         return query(ti, tj, bi, bj);
+//     }
+//     void rotate_clockwise() {
+//         vvi temp(m, vi(n));
+//         forn(i, n) forn(j, m) temp[j][n - 1 - i] = mat[i][j];
+//         swap(n, m);
+//         pf = temp, mat = temp;
+//         forn1(i, n - 1) forn1(j, m - 1) pf[i][j] += pf[i - 1][j - 1];
+//     }
+// };
+
+namespace gg {
+struct range {
+    int L, R, id;
+    static int counter;
+    range(int l = 0, int r = 0) : L(l), R(r){};
+    friend istream& operator>>(istream& c, range& r);
+    friend ostream& operator<<(ostream& c, const range& r);
+    friend bool operator<(const range& a, const range& b) {
+        if (a.R < b.R) return true;
+        if (a.R == b.R) return a.L > b.L;
+        return false;
+    };
+};
+
+int range::counter = 0;
+istream& operator>>(istream& c, range& r) {
+    c >> r.L >> r.R;
+    r.id = range::counter++;
+    return c;
+}
+ostream& operator<<(ostream& c, const range& r) {
+    c << "[" << r.L << " - " << r.R << "] - " << r.id;
+    return c;
+}
+}  // namespace gg
+
+// int main() {
+//     cout << "Hello World\n";
+//     return 0;
+// }
